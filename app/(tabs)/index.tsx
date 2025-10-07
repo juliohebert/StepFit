@@ -3674,12 +3674,19 @@ export default function FitnessApp() {
     const safeDietPlans = dietPlans || [];
     const updatedDiets = safeDietPlans.map(diet => {
       if (diet.id === dietId) {
+        // Verificar se o dia selecionado existe nas refeições semanais
+        if (!diet.weeklyMeals || !diet.weeklyMeals[selectedDietDay]) {
+          console.warn(`Dia ${selectedDietDay} não encontrado nas refeições da dieta ${dietId}`);
+          return diet;
+        }
+        
         return {
           ...diet,
           weeklyMeals: {
             ...diet.weeklyMeals,
             [selectedDietDay]: diet.weeklyMeals[selectedDietDay].map(meal => {
               if (meal.id === mealId) {
+                console.log(`Alterando status da refeição ${meal.name}: ${meal.completed} -> ${!(meal.completed || false)}`);
                 return { ...meal, completed: !(meal.completed || false) };
               }
               return meal;
@@ -5436,18 +5443,18 @@ export default function FitnessApp() {
     
     const totalMeals = safeDietPlans.reduce((total, plan) => {
       // Verificação robusta para plan e suas propriedades
-      if (!plan || !plan.weeklyMeals || !plan.weeklyMeals[selectedWorkoutDay]) {
+      if (!plan || !plan.weeklyMeals || !plan.weeklyMeals[selectedDietDay]) {
         return total;
       }
-      return total + (plan.weeklyMeals[selectedWorkoutDay]?.length || 0);
+      return total + (plan.weeklyMeals[selectedDietDay]?.length || 0);
     }, 0);
 
     const completedMeals = safeDietPlans.reduce((total, plan) => {
       // Verificação robusta para plan e suas propriedades
-      if (!plan || !plan.weeklyMeals || !plan.weeklyMeals[selectedWorkoutDay]) {
+      if (!plan || !plan.weeklyMeals || !plan.weeklyMeals[selectedDietDay]) {
         return total;
       }
-      const dayMeals = plan.weeklyMeals[selectedWorkoutDay] || [];
+      const dayMeals = plan.weeklyMeals[selectedDietDay] || [];
       return total + dayMeals.filter(meal => meal && meal.completed === true).length;
     }, 0);
 
@@ -5509,19 +5516,19 @@ export default function FitnessApp() {
                   key={day}
                   style={[
                     styles.modernDietDayButton,
-                    selectedWorkoutDay === day && styles.modernDietDayButtonActive
+                    selectedDietDay === day && styles.modernDietDayButtonActive
                   ]}
-                  onPress={() => setSelectedWorkoutDay(day)}
+                  onPress={() => setSelectedDietDay(day)}
                 >
                   <Text style={[
                     styles.modernDietDayButtonText,
-                    selectedWorkoutDay === day && styles.modernDietDayButtonTextActive
+                    selectedDietDay === day && styles.modernDietDayButtonTextActive
                   ]}>
                     {day.charAt(0).toUpperCase() + day.slice(1)}
                   </Text>
                   <View style={[
                     styles.modernDietDayIndicator,
-                    selectedWorkoutDay === day && styles.modernDietDayIndicatorActive
+                    selectedDietDay === day && styles.modernDietDayIndicatorActive
                   ]} />
                 </TouchableOpacity>
               ))}
@@ -5557,8 +5564,8 @@ export default function FitnessApp() {
                   return null;
                 }
                 
-                const currentDayMeals = Array.isArray(plan?.weeklyMeals?.[selectedWorkoutDay]) 
-                  ? plan.weeklyMeals[selectedWorkoutDay] 
+                const currentDayMeals = Array.isArray(plan?.weeklyMeals?.[selectedDietDay]) 
+                  ? plan.weeklyMeals[selectedDietDay] 
                   : [];
                 const mealProgress = currentDayMeals.length > 0 ? 
                   (currentDayMeals.filter(meal => meal && meal.completed === true).length / currentDayMeals.length) * 100 : 0;
@@ -5704,56 +5711,6 @@ export default function FitnessApp() {
         </ScrollView>
       </View>
     );
-  };
-
-  // Função para calcular indicadores de produção com redução
-  const calculateProductionIndicators = () => {
-    const indicators = {
-      july: { 2024: 45, 2025: 13 },
-      august: { 2024: 32, 2025: 15 },
-      september: { 2024: 20, 2025: 7 },
-    };
-
-    const calculateReduction = (oldValue: number, newValue: number) => {
-      if (oldValue === 0) return 0;
-      return Math.round(((oldValue - newValue) / oldValue) * 100);
-    };
-
-    const julyReduction = calculateReduction(indicators.july[2024], indicators.july[2025]);
-    const augustReduction = calculateReduction(indicators.august[2024], indicators.august[2025]);
-    const septemberReduction = calculateReduction(indicators.september[2024], indicators.september[2025]);
-    
-    const quarterTotal2024 = indicators.july[2024] + indicators.august[2024] + indicators.september[2024];
-    const quarterTotal2025 = indicators.july[2025] + indicators.august[2025] + indicators.september[2025];
-    const quarterReduction = calculateReduction(quarterTotal2024, quarterTotal2025);
-
-    return {
-      monthly: [
-        {
-          month: 'Julho',
-          2024: indicators.july[2024],
-          2025: indicators.july[2025],
-          reduction: julyReduction
-        },
-        {
-          month: 'Agosto',
-          2024: indicators.august[2024],
-          2025: indicators.august[2025],
-          reduction: augustReduction
-        },
-        {
-          month: 'Setembro',
-          2024: indicators.september[2024],
-          2025: indicators.september[2025],
-          reduction: septemberReduction
-        }
-      ],
-      quarterly: {
-        2024: quarterTotal2024,
-        2025: quarterTotal2025,
-        reduction: quarterReduction
-      }
-    };
   };
 
   const renderProgressoScreen = () => {
